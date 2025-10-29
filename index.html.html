@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Калькулятор выгоды: без переезда — ФДО ТУСУР</title>
+<style>
+  :root{
+    --bg:#f6f8fb;
+    --card:#ffffff;
+    --text:#111827;
+    --muted:#6b7280;
+    --line:#e5e7eb;
+    --primary:#2a6cf6;
+    --offline:#ef4444;  /* офлайн-расходы */
+    --online:#0ea5e9;   /* онлайн-расходы */
+    --save:#16a34a;     /* экономия */
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  }
+  .wrap{max-width:1080px; margin:24px auto; padding:0 16px;}
+  header{
+    margin-bottom:16px;
+  }
+  h1{
+    font-size:28px; margin:0 0 8px; letter-spacing:.2px;
+  }
+  header p{ margin:0; color:var(--muted)}
+  .grid{
+    display:grid; gap:16px;
+    grid-template-columns: 1fr 1fr;
+  }
+  @media (max-width: 900px){
+    .grid{ grid-template-columns: 1fr; }
+  }
+  .card{
+    background:var(--card); border:1px solid var(--line);
+    border-radius:12px; padding:16px;
+    box-shadow:0 1px 2px rgba(0,0,0,.03);
+  }
+  .card h2{
+    font-size:18px; margin:0 0 12px;
+  }
+  .sub{ color:var(--muted); font-size:14px; margin-top:6px;}
+  .row{ display:grid; gap:8px; grid-template-columns: 1fr 120px;}
+  .row + .row{ margin-top:10px;}
+  label{ font-size:14px; color:#374151; display:block;}
+  input[type="range"]{ width:100%;}
+  input[type="number"]{
+    width:100%; padding:8px 10px; border:1px solid var(--line);
+    border-radius:8px; background:#fff; font-size:14px;
+  }
+  .unit{ color:var(--muted); font-size:12px; }
+  .stack-8{ display:grid; gap:8px; }
+  .stack-12{ display:grid; gap:12px; }
+  .muted{ color:var(--muted) }
+  .summary{
+    display:grid; gap:16px; grid-template-columns: 1.2fr .8fr;
+  }
+  @media (max-width: 900px){
+    .summary{ grid-template-columns: 1fr; }
+  }
+  .kpis{
+    display:grid; gap:12px;
+    grid-template-columns: repeat(3, 1fr);
+  }
+  @media (max-width: 700px){
+    .kpis{ grid-template-columns: 1fr; }
+  }
+  .kpi{
+    border:1px dashed var(--line);
+    border-radius:12px; padding:12px 14px; background:#fff;
+  }
+  .kpi small{ color:var(--muted); display:block; margin-bottom:4px;}
+  .kpi .v{
+    font-weight:700; font-size:22px;
+  }
+  .kpi.save .v{ color:var(--save)}
+  .kpi.neg .v{ color:var(--offline)}
+  .pill{
+    display:inline-flex; align-items:center; gap:8px;
+    background:#eef2ff; color:#1e40af; border-radius:999px;
+    padding:6px 10px; font-weight:600; font-size:12px;
+  }
+  .legend{
+    display:flex; flex-wrap:wrap; gap:10px; margin-top:10px;
+  }
+  .legend .item{
+    display:flex; align-items:center; gap:8px; font-size:14px; color:#374151;
+    background:#f9fafb; border:1px solid var(--line); padding:6px 10px; border-radius:999px;
+  }
+  .dot{ width:10px; height:10px; border-radius:50%;}
+  .chart{
+    display:grid; grid-template-columns: 160px 1fr; gap:16px; align-items:center;
+  }
+  @media (max-width: 500px){
+    .chart{ grid-template-columns: 1fr; }
+  }
+  .donut{
+    width:160px; height:160px; border-radius:50%;
+    background:conic-gradient(var(--offline) 0 50%, var(--online) 0 100%);
+    position:relative;
+  }
+  .donut::after{
+    content:""; position:absolute; inset:16px; border-radius:50%; background:#fff;
+  }
+  .bars{ display:grid; gap:10px;}
+  .bar{ display:grid; gap:8px;}
+  .bar .lbl{ font-size:14px; color:#374151; display:flex; justify-content:space-between;}
+  .bar .track{
+    height:12px; background:#eef2f7; border-radius:999px; overflow:hidden; border:1px solid #e5e7eb;
+  }
+  .bar .fill{ height:100%;}
+  .fill.off{ background:linear-gradient(90deg, #fecaca, #ef4444); }
+  .fill.on{ background:linear-gradient(90deg, #bae6fd, #0ea5e9); }
+
+  .footer{
+    display:flex; flex-wrap:wrap; gap:8px; justify-content:space-between; align-items:center;
+    margin-top:8px; color:var(--muted); font-size:13px;
+  }
+  .btns{ display:flex; gap:8px;}
+  button{
+    background:var(--primary); color:#fff; border:0; border-radius:10px;
+    padding:10px 14px; font-weight:600; cursor:pointer;
+  }
+  button.secondary{
+    background:#f3f4f6; color:#111827; border:1px solid var(--line);
+  }
+  .brand{ color:var(--muted); font-weight:600; }
+  .brand b{ color:var(--primary)}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="pill">Инфографика‑калькулятор</div>
+      <h1>Снижение затрат на переезд и проживание</h1>
+      <p>Посчитайте выгоду дистанционного обучения без переезда. Изменяйте ползунки — цифры и диаграммы обновятся автоматически.</p>
+    </header>
+
+    <section class="grid">
+      <div class="card">
+        <h2>Если переехать (офлайн‑формат)</h2>
+        <div class="stack-12">
+          <div class="row">
+            <div>
+              <label for="rent">Аренда жилья (₽/мес)</label>
+              <input type="range" id="rent_r" min="0" max="80000" step="1000" value="18000">
+            </div>
+            <div>
+              <label class="unit">Сумма</label>
+              <input type="number" id="rent" min="0" step="500" value="18000">
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="utils">Коммуналка + интернет (₽/мес)</label>
+              <input type="range" id="utils_r" min="0" max="15000" step="500" value="3000">
+            </div>
+            <div>
+              <label class="unit">Сумма</label>
+              <input type="number" id="utils" min="0" step="100" value="3000">
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="transport_city">Транспорт по городу (₽/мес)</label>
+              <input type="range" id="transport_city_r" min="0" max="10000" step="200" value="1000">
+            </div>
+            <div>
+              <label class="unit">Сумма</label>
+              <input type="number" id="transport_city" min="0" step="100" value="1000">
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="food_diff">Разница по питанию (₽/мес)</label>
+              <input type="range" id="food_diff_r" min="0" max="20000" step="500" value="4000">
+            </div>
+            <div>
+              <label class="unit">Сумма</label>
+              <input type="number" id="food_diff" min="0" step="100" value="4000">
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="other_offline">Прочие расходы (₽/год)</label>
+              <input type="range" id="other_offline_r" min="0" max="100000" step="1000" value="20000">
+            </div>
+            <div>
+              <label class="unit">Сумма</label>
+              <input type="number" id="other_offline" min="0" step="500" value="20000">
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="relocation">Релокация (₽, единовременно)</label>
+              <input type="range" id="relocation_r" min="0" max="80000" step="1000" value="15000">
+            </div>
+            <div>
+              <label class="unit">Сумма</label>
+              <input type="number" id="relocation" min="0" step="500" value="15000">
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="home_travel">Дорога домой (₽/год)</label>
+              <input type="range" id="home_travel_r" min="0" max="100000" step="1000" value="30000">
+            </div>
+            <div>
+              <label class="unit">Сумма</label>
+              <input type="number" id="home_travel" min="0" step="500" value="30000">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Если учиться дистанционно (онлайн)</h2>
+        <div class="stack-12">
+          <div class="row">
+            <div>
+              <label for="net_extra">Доп. интернет/связь (₽/мес)</label>
+              <input type="range" id="net_extra_r" min="0" max="5000" step="100" value="500">
+            </div>
+            <div>
+              <label class="unit">Сумма</label>
+              <input type="number" id="net_extra" min="0" step="50" value="500">
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="amort">Амортизация техники (₽/мес)</label>
+              <input type="range" id="amort_r" min="0" max="10000" step="100" value="1500">
+            </div>
+            <div>
+              <label class="unit">Сумма</label>
+              <input type="number" id="amort" min="0" step="50" value="1500">
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="campus_travel">Поездки в вуз (₽/год)</label>
+              <input type="range" id="campus_travel_r" min="0" max="80000" step="1000" value="10000">
+            </div>
+            <div>
+              <label class="unit">Сумма</label>
+              <input type="number" id="campus_travel" min="0" step="500" value="10000">
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="services">Платные сервисы (₽/мес)</label>
+              <input type="range" id="services_r" min="0" max="5000" step="50" value="0">
+            </div>
+            <div>
+              <label class="unit">Сумма</label>
+              <input type="number" id="services" min="0" step="50" value="0">
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="other_online">Прочие онлайн‑расходы (₽/год)</label>
+              <input type="range" id="other_online_r" min="0" max="100000" step="1000" value="0">
+            </div>
+            <div>
+              <label class="unit">Сумма</label>
+              <input type="number" id="other_online" min="0" step="500" value="0">
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="years">Срок обучения (лет)</label>
+              <input type="range" id="years_r" min="1" max="6" step="1" value="4">
+            </div>
+            <div>
+              <label class="unit">Лет</label>
+              <input type="number" id="years" min="1" max="6" step="1" value="4">
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:16px;">
+      <div class="summary">
+        <div>
+          <h2>Итоги и экономия</h2>
+          <div class="kpis">
+            <div class="kpi" id="kpi_month">
+              <small>Экономия в месяц</small>
+              <div class="v" id="save_month">—</div>
+              <div class="sub">Без учёта разовых и годовых статей</div>
+            </div>
+            <div class="kpi" id="kpi_year">
+              <small>Экономия в год</small>
+              <div class="v" id="save_year">—</div>
+              <div class="sub">Учитывает дорогу/релокацию/прочее</div>
+            </div>
+            <div class="kpi save" id="kpi_prog">
+              <small>Экономия за программу</small>
+              <div class="v" id="save_program">—</div>
+              <div class="sub">Годы обучения × годовая экономия</div>
+            </div>
+          </div>
+
+          <div class="legend">
+            <div class="item"><span class="dot" style="background:var(--offline)"></span> Офлайн‑расходы</div>
+            <div class="item"><span class="dot" style="background:var(--online)"></span> Онлайн‑расходы</div>
+            <div class="item"><span class="dot" style="background:var(--save)"></span> Экономия</div>
+          </div>
+        </div>
+
+        <div class="chart">
+          <div class="donut" id="donut" title="Доля годовых расходов: офлайн vs онлайн"></div>
+          <div class="bars">
+            <div class="bar">
+              <div class="lbl">
+                <span>Офлайн (год)</span>
+                <strong id="offline_year_lbl">—</strong>
+              </div>
+              <div class="track">
+                <div class="fill off" id="offline_fill" style="width:50%"></div>
+              </div>
+            </div>
+            <div class="bar">
+              <div class="lbl">
+                <span>Онлайн (год)</span>
+                <strong id="online_year_lbl">—</strong>
+              </div>
+              <div class="track">
+                <div class="fill on" id="online_fill" style="width:30%"></div>
+              </div>
+            </div>
+            <div class="bar">
+              <div class="lbl">
+                <span>Экономия (год)</span>
+                <strong id="year_diff_lbl">—</strong>
+              </div>
+              <div class="track">
+                <div class="fill" id="save_fill" style="width:70%; background:linear-gradient(90deg,#bbf7d0,#16a34a)"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div class="brand">ФДО <b>ТУСУР</b> · Дистанционное обучение</div>
+        <div class="btns">
+          <button class="secondary" id="resetBtn">Сбросить значения</button>
+          <button id="printBtn" title="Откройте печать и сохраните как PDF">Сохранить как PDF</button>
+        </div>
+      </div>
+    </section>
+
+    <p class="muted" style="margin-top:10px">
+      Примечание: расчёт приблизительный и не заменяет финансовое планирование. Учитывайте ваши реальные цены на аренду, проезд, питание и т. п.
+    </p>
+  </div>
+
+<script>
+  const $ = (sel) => document.querySelector(sel);
+
+  // Пары ползунок <-> число
+  const pairs = [
+    ["rent","rent_r"],
+    ["utils","utils_r"],
+    ["transport_city","transport_city_r"],
+    ["food_diff","food_diff_r"],
+    ["other_offline","other_offline_r"],
+    ["relocation","relocation_r"],
+    ["home_travel","home_travel_r"],
+
+    ["net_extra","net_extra_r"],
+    ["amort","amort_r"],
+    ["campus_travel","campus_travel_r"],
+    ["services","services_r"],
+    ["other_online","other_online_r"],
+
+    ["years","years_r"]
+  ];
+
+  // Синхронизация значений
+  function linkPair(idText, idRange){
+    const t = $("#"+idText);
+    const r = $("#"+idRange);
+    const sync = (from, to) => () => { to.value = from.value; calc(); };
+    t.addEventListener("input", sync(t,r));
+    r.addEventListener("input", sync(r,t));
+  }
+  pairs.forEach(([t,r])=>linkPair(t,r));
+
+  function num(id){ return Number($("#"+id).value)||0; }
+  function fmt(n){ return n.toLocaleString('ru-RU') + " ₽"; }
+
+  function calc(){
+    // Месячные офлайн
+    const rent = num("rent");
+    const utils = num("utils");
+    const tc = num("transport_city");
+    const food = num("food_diff");
+    const other_off_y = num("other_offline");
+
+    const relocation = num("relocation"); // разово
+    const home_travel = num("home_travel"); // год
+
+    const offline_month = rent + utils + tc + food + (other_off_y/12);
+    const offline_year = offline_month*12 + relocation + home_travel;
+
+    // Онлайн
+    const net = num("net_extra");
+    const amort = num("amort");
+    const services = num("services");
+    const other_on_y = num("other_online");
+    const campus_travel = num("campus_travel");
+
+    const online_month = net + amort + services + (other_on_y/12);
+    const online_year = online_month*12 + campus_travel;
+
+    // Экономия
+    const diff_month = offline_month - online_month;
+    const diff_year = offline_year - online_year;
+    const years = Math.max(1, Math.min(6, num("years")));
+    const diff_program = diff_year * years;
+
+    // KPI значения
+    $("#save_month").textContent = (diff_month>=0?"+":"") + fmt(Math.round(diff_month));
+    $("#save_year").textContent = (diff_year>=0?"+":"") + fmt(Math.round(diff_year));
+    $("#save_program").textContent = (diff_program>=0?"+":"") + fmt(Math.round(diff_program));
+
+    // KPI цвета при отрицательной разнице
+    $("#kpi_month").classList.toggle("neg", diff_month<0);
+    $("#kpi_year").classList.toggle("neg", diff_year<0);
+    $("#kpi_prog").classList.toggle("neg", diff_program<0);
+
+    // Годовые значения и бары
+    $("#offline_year_lbl").textContent = fmt(Math.round(offline_year));
+    $("#online_year_lbl").textContent  = fmt(Math.round(online_year));
+    $("#year_diff_lbl").textContent    = (diff_year>=0?"+":"") + fmt(Math.round(diff_year));
+
+    const total = Math.max(1, offline_year + online_year);
+    const offPct = Math.round((offline_year/total)*100);
+    const onPct = 100 - offPct;
+
+    $("#offline_fill").style.width = Math.min(100, Math.max(0, offPct)) + "%";
+    $("#online_fill").style.width  = Math.min(100, Math.max(0, onPct)) + "%";
+
+    // Экономия бар
+    const savePct = Math.max(0, Math.min(100, (Math.abs(diff_year)/Math.max(offline_year, online_year))*100));
+    const saveFill = $("#save_fill");
+    saveFill.style.width = savePct + "%";
+    saveFill.style.background = diff_year>=0
+      ? "linear-gradient(90deg,#bbf7d0,#16a34a)"
+      : "linear-gradient(90deg,#fecaca,#ef4444)";
+
+    // Донат‑чарт (офлайн vs онлайн)
+    const donut = $("#donut");
+    donut.style.background = `conic-gradient(var(--offline) 0 ${offPct}%, var(--online) 0 100%)`;
+    donut.title = `Офлайн: ${offPct}% • Онлайн: ${onPct}%`;
+  }
+
+  // Кнопки
+  $("#resetBtn").addEventListener("click", ()=>{
+    const defaults = {
+      rent:18000, utils:3000, transport_city:1000, food_diff:4000,
+      other_offline:20000, relocation:15000, home_travel:30000,
+      net_extra:500, amort:1500, campus_travel:10000, services:0, other_online:0,
+      years:4
+    };
+    Object.entries(defaults).forEach(([k,v])=>{
+      $("#"+k).value = v;
+      $("#"+k+"_r").value = v;
+    });
+    calc();
+  });
+  $("#printBtn").addEventListener("click", ()=>window.print());
+
+  // Первый расчёт
+  calc();
+</script>
+</body>
+</html>
